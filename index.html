@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secret Santa Shareable App</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+    .container { max-width: 480px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+    button { width: 100%; padding: 12px; font-size: 18px; border: none; border-radius: 10px; background: #4CAF50; color: white; cursor: pointer; }
+    button:hover { background: #45a049; }
+    .result { margin-top: 15px; padding: 12px; background: #fff; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-size: 18px; white-space: pre-wrap; }
+    input[type="text"] { width: 100%; padding: 10px; font-size: 16px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
+    .row { display: flex; gap: 8px; margin-top: 10px; }
+    .small { width: 48%; }
+    .muted { color: #666; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 style="text-align:center;">Secret Santa — Draw Your Recipient</h2>
+    <p class="muted">Enter your first name exactly as listed or use the link sent to you to see your draw. Only you will see your assignment.</p>
+
+    <label for="drawerName">Your Name</label>
+    <input type="text" id="drawerName" placeholder="e.g. Rob" autocomplete="off" />
+
+    <div class="row">
+      <div class="small"><button id="drawBtn" onclick="drawName()">Draw</button></div>
+      <div class="small"><button id="resetBtn" onclick="resetAll()" style="background:#f44336; display:none;">Reset</button></div>
+    </div>
+
+    <div id="result" class="result" style="display:none;"></div>
+  </div>
+
+  <script>
+    const INITIAL_PEOPLE = ["Rob","Tilly","Sarah","Harry","Dan","Kelly","Neve","Erin"];
+    let assignments = {};
+    const usedDrawers = new Set();
+    let resetPressed = false;
+
+    const resultBox = document.getElementById('result');
+    const drawerInput = document.getElementById('drawerName');
+    const resetBtn = document.getElementById('resetBtn');
+
+    function normalizeName(s) { return s.trim().toLowerCase(); }
+
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function generateDerangement(names) {
+      const maxAttempts = 1000;
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const receivers = shuffle(names);
+        if (!names.some((n,i) => normalizeName(n) === normalizeName(receivers[i]))) return receivers;
+      }
+      return names.map((n,i) => names[(i+1)%names.length]);
+    }
+
+    function initAssignments() {
+      const receivers = generateDerangement(INITIAL_PEOPLE);
+      for (let i=0;i<INITIAL_PEOPLE.length;i++) {
+        assignments[normalizeName(INITIAL_PEOPLE[i])] = receivers[i];
+      }
+    }
+
+    function showMessage(msg, isError=false) {
+      if (!resultBox) return;
+      resultBox.style.display = 'block';
+      resultBox.textContent = msg;
+      resultBox.style.borderLeft = isError ? '6px solid #f44336' : '6px solid #4CAF50';
+    }
+
+    function drawName() {
+      let drawer = (drawerInput && drawerInput.value) || '';
+
+      if (!drawer) { showMessage('Please enter your name.', true); return; }
+
+      const drawerNorm = normalizeName(drawer);
+
+      if (drawerNorm === 'cabbage' && resetBtn) resetBtn.style.display = 'block';
+
+      if (drawerNorm === 'log') {
+        let logText = 'Secret Santa Assignments:\n';
+        for (const [giver, recipient] of Object.entries(assignments)) {
+          logText += `${giver} → ${recipient}\n`;
+        }
+        showMessage(logText);
+        return;
+      }
+
+      const participantNorms = INITIAL_PEOPLE.map(p => normalizeName(p));
+      if (!participantNorms.includes(drawerNorm)) { showMessage('Name not recognized.', true); return; }
+      if (usedDrawers.has(drawerNorm)) { showMessage('You have already drawn.', true); return; }
+
+      const recipient = assignments[drawerNorm];
+      usedDrawers.add(drawerNorm);
+      showMessage(`Hi ${drawer}, you will give a gift to: ${recipient}`);
+    }
+
+    function resetAll() {
+      resetPressed = true;
+      assignments = {};
+      usedDrawers.clear();
+
+      if (drawerInput) drawerInput.value = '';
+
+      if (resultBox) {
+        resultBox.style.display = 'none';
+        resultBox.textContent = '';
+        resultBox.style.borderLeft = '';
+      }
+
+      if (resetBtn) resetBtn.style.display = 'none';
+
+      initAssignments(); // re-randomize assignments for next draw
+    }
+
+    // Ensure log works reliably on GitHub Pages with URL parameters
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlName = urlParams.get('name');
+      if (urlName && drawerInput) {
+        drawerInput.value = urlName;
+        drawName(); // automatically draw including log
+      }
+    });
+
+    initAssignments();
+  </script>
+</body>
+</html>
