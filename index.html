@@ -83,16 +83,17 @@
 
       const drawerNorm = normalizeName(drawer);
 
-      if (drawerNorm === 'cabbage' && resetBtn) resetBtn.style.display = 'block';
-
+      // Show log immediately if drawer is 'log'
       if (drawerNorm === 'log') {
         let logText = 'Secret Santa Assignments:\n';
         for (const [giver, recipient] of Object.entries(assignments)) {
           logText += `${giver} → ${recipient}\n`;
         }
         showMessage(logText);
-        return;
+        return; // exit early
       }
+
+      if (drawerNorm === 'cabbage' && resetBtn) resetBtn.style.display = 'block';
 
       const participantNorms = INITIAL_PEOPLE.map(p => normalizeName(p));
       if (!participantNorms.includes(drawerNorm)) { showMessage('Name not recognized.', true); return; }
@@ -121,13 +122,13 @@
       initAssignments(); // re-randomize assignments for next draw
     }
 
-    // Ensure log works reliably on GitHub Pages with URL parameters
+    // Pre-fill input from URL and draw automatically (log works reliably on GitHub Pages)
     window.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
       const urlName = urlParams.get('name');
       if (urlName && drawerInput) {
         drawerInput.value = urlName;
-        drawName(); // automatically draw including log
+        drawName(); // log or personal draw works immediately
       }
     });
 
